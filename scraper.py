@@ -1,30 +1,52 @@
+
 import requests
 from bs4 import BeautifulSoup
 import json
 
-url = "https://quotes.toscrape.com/"
+data = {
+    "headlines": [],
+    "quotes": []
+}
 
 try:
-    response = requests.get(url, timeout=10)
+    # Scrape headlines
+    response = requests.get(
+        "https://quotes.toscrape.com/",
+        timeout=10
+    )
     response.raise_for_status()
-
     soup = BeautifulSoup(response.text, "html.parser")
-    quotes = []
 
     for item in soup.select(".quote"):
-        text = item.select_one(".text")
+        quote = item.select_one(".text")
         author = item.select_one(".author")
 
-        if text and author:
-            quotes.append({
-                "quote": text.get_text(strip=True),
+        if quote and author:
+            data["quotes"].append({
+                "quote": quote.get_text(strip=True),
                 "author": author.get_text(strip=True)
             })
 
-    with open("quotes.json", "w", encoding="utf-8") as file:
-        json.dump(quotes, file, indent=4, ensure_ascii=False)
+    # Scrape headlines from a practice news site
+    response = requests.get(
+        "https://www.bbc.com/news",
+        timeout=10
+    )
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, "html.parser")
 
-    print(f"Saved {len(quotes)} quotes to quotes.json")
+    for item in soup.select("h2"):
+        headline = item.get_text(strip=True)
+        if headline and headline not in data["headlines"]:
+            data["headlines"].append(headline)
+
+    with open("scraped_data.json", "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=4, ensure_ascii=False)
+
+    print("Quotes found:", len(data["quotes"]))
+    print("Headlines found:", len(data["headlines"]))
+    print("Data saved to scraped_data.json")
 
 except requests.RequestException as error:
     print("Website request failed:", error)
+    
